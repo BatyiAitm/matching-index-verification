@@ -5,6 +5,8 @@ Code used to check the calculations for the generator-load matching index
 
 Author: Shamilov Batyi Aitmerekovich
 
+Copyright (c) 2026 Shamilov Batyi Aitmerekovich. All rights reserved.
+
 ## Contents
 
 The main file is `matching_index.py`. It includes:
