@@ -1,10 +1,10 @@
-"""Calculation checks for the generator-load matching index M_E(G)."""
+# Checks for the generator-load matching index M_E(G).
+# Run: python matching_index.py
 
 import networkx as nx
 
 
 def build_energy_network(gen_nodes, load_nodes, aux_nodes, edges):
-    """Build a graph and mark node types."""
     G = nx.Graph()
     G.add_nodes_from(gen_nodes, kind="gen")
     G.add_nodes_from(load_nodes, kind="load")
@@ -14,7 +14,6 @@ def build_energy_network(gen_nodes, load_nodes, aux_nodes, edges):
 
 
 def gl_subgraph(G, gen_nodes, load_nodes):
-    """Keep only direct generator-load edges."""
     gen_set, load_set = set(gen_nodes), set(load_nodes)
     gl_edges = [
         (u, v) for u, v in G.edges()
@@ -28,10 +27,6 @@ def gl_subgraph(G, gen_nodes, load_nodes):
 
 
 def matching_energy_index(G, gen_nodes, load_nodes):
-    """
-    M_E(G) = nu(G_GL) / min(|V_G|, |V_L|)
-    Returns the index value, matching size, denominator, and matched edges.
-    """
     if len(gen_nodes) == 0 or len(load_nodes) == 0:
         raise ValueError("V_G and V_L must be non-empty")
 
@@ -48,10 +43,6 @@ def matching_energy_index(G, gen_nodes, load_nodes):
 
 
 def capacity_feasible_index(G, gen_nodes, load_nodes, gen_capacity, load_demand):
-    """
-    Simple capacity-feasible variant.
-    Edge (g, l) is used only if capacity(g) >= demand(l).
-    """
     gen_set, load_set = set(gen_nodes), set(load_nodes)
     eligible = [
         (u, v) for u, v in G.edges()
@@ -72,12 +63,6 @@ def capacity_feasible_index(G, gen_nodes, load_nodes, gen_capacity, load_demand)
 
 
 def weighted_matching_index(G, gen_nodes, load_nodes, weight="capacity"):
-    """
-    Weighted version:
-    M_E^w(G) = nu_w(G_GL) / W_k(G_GL),
-    where nu_w is the maximum matching weight and W_k is the sum of the
-    k largest edge weights in E_GL.
-    """
     B = gl_subgraph(G, gen_nodes, load_nodes)
     for u, v in B.edges():
         B[u][v][weight] = G[u][v].get(weight, 1.0)
@@ -89,14 +74,11 @@ def weighted_matching_index(G, gen_nodes, load_nodes, weight="capacity"):
     matching = nx.max_weight_matching(B, weight=weight)
     nu_w = sum(B[u][v][weight] for u, v in matching)
 
+    # W_k is the sum of the k largest direct generator-load edge weights.
     all_weights = sorted([B[u][v][weight] for u, v in B.edges()], reverse=True)
     W_k = sum(all_weights[:k]) if len(all_weights) >= k else sum(all_weights)
     return nu_w / W_k if W_k > 0 else 0.0
 
-
-# ---------------------------------------------------------------------------
-# Test networks
-# ---------------------------------------------------------------------------
 
 IEEE_33_BUS_BRANCHES = [
     (1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,8),(8,9),(9,10),(10,11),
@@ -119,12 +101,14 @@ IEEE_69_BUS_BRANCHES = [
 
 
 def build_ieee33():
-    G = nx.Graph(); G.add_edges_from(IEEE_33_BUS_BRANCHES)
+    G = nx.Graph()
+    G.add_edges_from(IEEE_33_BUS_BRANCHES)
     return G
 
 
 def build_ieee69():
-    G = nx.Graph(); G.add_edges_from(IEEE_69_BUS_BRANCHES)
+    G = nx.Graph()
+    G.add_edges_from(IEEE_69_BUS_BRANCHES)
     return G
 
 
@@ -134,16 +118,12 @@ def build_looped_microgrid():
         ("g1","a1"),("g2","a2"),("g3","a3"),
         ("l1","a4"),("l2","a5"),("l3","a6"),
     ]
-    G = nx.Graph(); G.add_edges_from(edges)
+    G = nx.Graph()
+    G.add_edges_from(edges)
     return G
 
 
-# ---------------------------------------------------------------------------
-# Checks
-# ---------------------------------------------------------------------------
-
 def verify_paper_example():
-    """Small example with an auxiliary node."""
     gen = ["g1", "g2", "g3"]
     load = ["l1", "l2", "l3", "l4"]
     aux = ["a1"]
@@ -159,11 +139,10 @@ def verify_paper_example():
     G2 = build_energy_network(gen, load, aux, edges_reduced)
     me2, nu2, denom2, _ = matching_energy_index(G2, gen, load)
     assert abs(me2 - 2/3) < 1e-9, f"Expected M_E=2/3, got {me2}"
-    print(f"[OK] small example: M_E={me:.4f} -> {me2:.4f} after edge removal")
+    print(f"small example: M_E={me:.4f}; after removing (g3,l4), M_E={me2:.4f}")
 
 
 def verify_test_networks():
-    """Run 33-bus and 69-bus examples."""
     G33 = build_ieee33()
     scenarios_33 = {
         "A (single source)": [1],
@@ -174,7 +153,7 @@ def verify_test_networks():
     for label, gen in scenarios_33.items():
         load = [n for n in G33.nodes() if n not in gen]
         me, nu, denom, _ = matching_energy_index(G33, gen, load)
-        print(f"[33-bus, {label}] V_G={gen}: M_E = {nu}/{denom} = {me:.4f}")
+        print(f"33-bus, {label}: V_G={gen}, M_E={nu}/{denom}={me:.4f}")
 
     G69 = build_ieee69()
     scenarios_69 = {
@@ -186,11 +165,10 @@ def verify_test_networks():
     for label, gen in scenarios_69.items():
         load = [n for n in G69.nodes() if n not in gen]
         me, nu, denom, _ = matching_energy_index(G69, gen, load)
-        print(f"[69-bus, {label}] V_G={gen}: M_E = {nu}/{denom} = {me:.4f}")
+        print(f"69-bus, {label}: V_G={gen}, M_E={nu}/{denom}={me:.4f}")
 
 
 def verify_comparison_with_standard_metrics():
-    """Compare with common graph metrics."""
     G33 = build_ieee33()
     deg_cent = nx.degree_centrality(G33)
     clos_cent = nx.closeness_centrality(G33)
@@ -198,14 +176,13 @@ def verify_comparison_with_standard_metrics():
     alg_conn = nx.algebraic_connectivity(G33)
 
     for label, gen in [("clustered {1,2,3}", [1,2,3]), ("dispersed {1,19,23}", [1,19,23])]:
-        print(f"[{label}] sum(degree)={sum(deg_cent[n] for n in gen):.4f}, "
+        print(f"{label}: sum(degree)={sum(deg_cent[n] for n in gen):.4f}, "
               f"sum(closeness)={sum(clos_cent[n] for n in gen):.4f}, "
               f"sum(betweenness)={sum(betw[n] for n in gen):.4f}")
     print(f"algebraic_connectivity(G) = {alg_conn:.6f}")
 
 
 def verify_capacity_feasibility():
-    """Check the capacity-feasible variant."""
     import random
     random.seed(7)
     G33 = build_ieee33()
@@ -222,7 +199,6 @@ def verify_capacity_feasibility():
 
 
 def verify_weighted_example():
-    """Small numerical example for the weighted version."""
     gen = ["g1", "g2", "g3"]
     load = ["l1", "l2", "l3", "l4"]
     aux = []
@@ -240,20 +216,19 @@ def verify_weighted_example():
 
 
 def verify_looped_microgrid():
-    """Looped network without direct generator-load edges."""
     G = build_looped_microgrid()
     gen, load = ["g1","g2","g3"], ["l1","l2","l3"]
     me, nu, denom, _ = matching_energy_index(G, gen, load)
     print(f"Looped microgrid, no direct G-L edges: M_E = {nu}/{denom} = {me:.4f}")
     assert me == 0.0
 
-    G2 = G.copy(); G2.add_edge("g1", "l1")
+    G2 = G.copy()
+    G2.add_edge("g1", "l1")
     me2, nu2, denom2, _ = matching_energy_index(G2, gen, load)
     print(f"After adding one direct edge (g1,l1): M_E = {nu2}/{denom2} = {me2:.4f}")
 
 
 def verify_bounds_random(trials=2000, max_n=12, seed=0):
-    """Random checks for the bounds 0 <= M_E(G) <= 1."""
     import random
     from itertools import combinations
     rng = random.Random(seed)
@@ -280,29 +255,28 @@ def verify_bounds_random(trials=2000, max_n=12, seed=0):
             violations.append((gen_nodes, load_nodes, aux_nodes, edges, me))
 
     if violations:
-        print(f"[FAIL] bound violations found: {len(violations)}")
+        print(f"FAIL: bound violations found: {len(violations)}")
     else:
-        print(f"[OK] bounds checked on {trials} random graphs")
+        print(f"bounds checked on {trials} random graphs")
 
 
 if __name__ == "__main__":
-    print("=== Small example ===")
     verify_paper_example()
 
-    print("\n=== 33-bus and 69-bus networks ===")
+    print()
     verify_test_networks()
 
-    print("\n=== Comparison with standard metrics ===")
+    print()
     verify_comparison_with_standard_metrics()
 
-    print("\n=== Capacity constraint ===")
+    print()
     verify_capacity_feasibility()
 
-    print("\n=== Weighted version ===")
+    print()
     verify_weighted_example()
 
-    print("\n=== Looped network ===")
+    print()
     verify_looped_microgrid()
 
-    print("\n=== Random bound check ===")
+    print()
     verify_bounds_random()
