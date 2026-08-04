@@ -21,5 +21,5 @@ Failures stop with an `assert`. A normal run prints the computed fractions
 and ends with:
 
 ```text
-bounds checked on 2000 random graphs
+bounds hold on 2000 random graphs
 ```
