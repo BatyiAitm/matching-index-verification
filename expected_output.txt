@@ -1,0 +1,26 @@
+section 5 example: M_E=1.0000; without (g3,l4): M_E=0.6667
+
+33-bus, A (single source): V_G=[1], M_E=1/1=1.0000
+33-bus, B (multi-DG illustrative): V_G=[1, 6, 12, 25, 30], M_E=5/5=1.0000
+33-bus, C (clustered): V_G=[1, 2, 3], M_E=2/3=0.6667
+33-bus, D (dispersed): V_G=[1, 19, 23], M_E=3/3=1.0000
+69-bus, clustered: V_G=[1, 2, 3], M_E=1/3=0.3333
+69-bus, dispersed: V_G=[1, 28, 36], M_E=3/3=1.0000
+69-bus, clustered, 5 nodes: V_G=[39, 40, 41, 42, 43], M_E=2/5=0.4000
+69-bus, dispersed, 5 nodes: V_G=[1, 8, 9, 11, 12], M_E=5/5=1.0000
+
+clustered {1,2,3}: sum(degree)=0.2188, sum(closeness)=0.4260, sum(betweenness)=0.7339
+dispersed {1,19,23}: sum(degree)=0.1562, sum(closeness)=0.3931, sum(betweenness)=0.2964
+lambda_2(33-bus) = 0.018339
+lambda_2(69-bus) = 0.006175
+
+structural M_E = 3/3 = 1.0000
+capacity-feasible M_E' = 2/3 = 0.6667
+
+unweighted M_E = 3/3 = 1.0000
+weighted M_E^w = 1.0000
+
+looped microgrid, no direct G-L edges: M_E = 0/3 = 0.0000
+after adding one direct edge (g1,l1): M_E = 1/3 = 0.3333
+
+bounds hold on 2000 random graphs

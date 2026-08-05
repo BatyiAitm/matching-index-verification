@@ -61,6 +61,10 @@ def weighted_index(G, gens, loads, weight="capacity"):
     return nu_w / W_k if W_k > 0 else 0.0
 
 
+def assert_close(x, expected, digits=6):
+    assert round(x, digits) == expected, x
+
+
 BRANCHES_33 = [
     (1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,8),(8,9),(9,10),(10,11),
     (11,12),(12,13),(13,14),(14,15),(15,16),(16,17),(17,18),
@@ -100,26 +104,28 @@ def verify_paper_example():
 def verify_test_networks():
     G33 = nx.Graph(BRANCHES_33)
     scenarios_33 = {
-        "A (single source)": [1],
-        "B (multi-DG illustrative)": [1, 6, 12, 25, 30],
-        "C (clustered)": [1, 2, 3],
-        "D (dispersed)": [1, 19, 23],
+        "A (single source)": ([1], 1, 1),
+        "B (multi-DG illustrative)": ([1, 6, 12, 25, 30], 5, 5),
+        "C (clustered)": ([1, 2, 3], 2, 3),
+        "D (dispersed)": ([1, 19, 23], 3, 3),
     }
-    for label, gens in scenarios_33.items():
+    for label, (gens, expected_nu, expected_k) in scenarios_33.items():
         loads = [n for n in G33 if n not in gens]
         me, nu, k = matching_index(G33, gens, loads)
+        assert (nu, k) == (expected_nu, expected_k), (label, nu, k)
         print(f"33-bus, {label}: V_G={gens}, M_E={nu}/{k}={me:.4f}")
 
     G69 = nx.Graph(BRANCHES_69)
     scenarios_69 = {
-        "clustered": [1, 2, 3],
-        "dispersed": [1, 28, 36],
-        "clustered, 5 nodes": [39, 40, 41, 42, 43],
-        "dispersed, 5 nodes": [1, 8, 9, 11, 12],
+        "clustered": ([1, 2, 3], 1, 3),
+        "dispersed": ([1, 28, 36], 3, 3),
+        "clustered, 5 nodes": ([39, 40, 41, 42, 43], 2, 5),
+        "dispersed, 5 nodes": ([1, 8, 9, 11, 12], 5, 5),
     }
-    for label, gens in scenarios_69.items():
+    for label, (gens, expected_nu, expected_k) in scenarios_69.items():
         loads = [n for n in G69 if n not in gens]
         me, nu, k = matching_index(G69, gens, loads)
+        assert (nu, k) == (expected_nu, expected_k), (label, nu, k)
         print(f"69-bus, {label}: V_G={gens}, M_E={nu}/{k}={me:.4f}")
 
 
@@ -128,12 +134,26 @@ def verify_standard_metrics():
     deg = nx.degree_centrality(G33)
     clo = nx.closeness_centrality(G33)
     bet = nx.betweenness_centrality(G33)
-    for label, gens in [("clustered {1,2,3}", [1,2,3]), ("dispersed {1,19,23}", [1,19,23])]:
-        print(f"{label}: sum(degree)={sum(deg[n] for n in gens):.4f}, "
-              f"sum(closeness)={sum(clo[n] for n in gens):.4f}, "
-              f"sum(betweenness)={sum(bet[n] for n in gens):.4f}")
-    print(f"lambda_2(33-bus) = {nx.algebraic_connectivity(G33):.6f}")
-    print(f"lambda_2(69-bus) = {nx.algebraic_connectivity(nx.Graph(BRANCHES_69)):.6f}")
+    rows = [
+        ("clustered {1,2,3}", [1,2,3], 0.2188, 0.4260, 0.7339),
+        ("dispersed {1,19,23}", [1,19,23], 0.1562, 0.3931, 0.2964),
+    ]
+    for label, gens, expected_deg, expected_clo, expected_bet in rows:
+        deg_sum = sum(deg[n] for n in gens)
+        clo_sum = sum(clo[n] for n in gens)
+        bet_sum = sum(bet[n] for n in gens)
+        assert_close(deg_sum, expected_deg, 4)
+        assert_close(clo_sum, expected_clo, 4)
+        assert_close(bet_sum, expected_bet, 4)
+        print(f"{label}: sum(degree)={deg_sum:.4f}, "
+              f"sum(closeness)={clo_sum:.4f}, "
+              f"sum(betweenness)={bet_sum:.4f}")
+    lambda_33 = nx.algebraic_connectivity(G33)
+    lambda_69 = nx.algebraic_connectivity(nx.Graph(BRANCHES_69))
+    assert_close(lambda_33, 0.018339, 6)
+    assert_close(lambda_69, 0.006175, 6)
+    print(f"lambda_2(33-bus) = {lambda_33:.6f}")
+    print(f"lambda_2(69-bus) = {lambda_69:.6f}")
 
 
 def verify_capacity_feasibility():
@@ -147,6 +167,8 @@ def verify_capacity_feasibility():
 
     me, nu, k = matching_index(G33, gens, loads)
     me_f, nu_f, k_f = capacity_feasible_index(G33, gens, loads, capacity, demand)
+    assert (nu, k) == (3, 3), (nu, k)
+    assert (nu_f, k_f) == (2, 3), (nu_f, k_f)
     print(f"structural M_E = {nu}/{k} = {me:.4f}")
     print(f"capacity-feasible M_E' = {nu_f}/{k_f} = {me_f:.4f}")
     assert nu_f <= nu, f"M_E' must be <= M_E, got {nu_f}/{k_f} vs {nu}/{k}"
@@ -161,6 +183,8 @@ def verify_weighted_example():
         G.add_edge(u, v, capacity=w)
     me, nu, k = matching_index(G, gens, loads)
     me_w = weighted_index(G, gens, loads)
+    assert (nu, k) == (3, 3), (nu, k)
+    assert_close(me_w, 1.0, 12)
     print(f"unweighted M_E = {nu}/{k} = {me:.4f}")
     print(f"weighted M_E^w = {me_w:.4f}")
 
@@ -179,6 +203,7 @@ def verify_looped_microgrid():
     assert nu == 0, nu
     G.add_edge("g1", "l1")
     me2, nu2, k2 = matching_index(G, gens, loads)
+    assert (nu2, k2) == (1, 3), (nu2, k2)
     print(f"after adding one direct edge (g1,l1): M_E = {nu2}/{k2} = {me2:.4f}")
 
 
@@ -203,10 +228,8 @@ def verify_bounds_random(trials=2000, max_n=12, seed=0):
         me, nu, k = matching_index(G, gens, loads)
         if not 0 <= nu <= k:
             bad += 1
-    if bad:
-        print(f"FAIL: {bad} bound violations")
-    else:
-        print(f"bounds hold on {trials} random graphs")
+    assert bad == 0, bad
+    print(f"bounds hold on {trials} random graphs")
 
 
 if __name__ == "__main__":

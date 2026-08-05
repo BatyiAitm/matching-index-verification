@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "If this verification code helps your work, cite the repository and the accompanying paper."
+title: "matching-index-verification"
+authors:
+  - family-names: "Shamilov"
+    given-names: "Batyi Aitmerekovich"
+year: 2026
+repository-code: "https://github.com/BatyiAitm/matching-index-verification"
