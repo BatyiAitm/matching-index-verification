@@ -1,4 +1,7 @@
-# Checks for the generator-load matching index M_E(G).
+# Checks for the generator-load matching index M_E(G): theorem 3.1 (bounds),
+# propositions 3.2 and 3.3 (the two extreme cases), the section 5 example,
+# the section 7 scenario table, the section 8 comparison with standard
+# centralities, and the variants of sections 9 and 10.
 # Run: python matching_index.py
 
 import networkx as nx
@@ -78,7 +81,7 @@ BRANCHES_69 = [
 ]
 
 
-def check_paper_example():
+def verify_paper_example():
     gens = ["g1", "g2", "g3"]
     loads = ["l1", "l2", "l3", "l4"]
     edges = [
@@ -87,14 +90,14 @@ def check_paper_example():
     ]
     G = nx.Graph(edges)
     me, nu, k = matching_index(G, gens, loads)
-    assert me == 1.0, me
+    assert (nu, k) == (3, 3), (nu, k)  # compare the fraction, not the float
     G.remove_edge("g3", "l4")
     me2, nu2, k2 = matching_index(G, gens, loads)
-    assert abs(me2 - 2/3) < 1e-9, me2
+    assert (nu2, k2) == (2, 3), (nu2, k2)
     print(f"section 5 example: M_E={me:.4f}; without (g3,l4): M_E={me2:.4f}")
 
 
-def check_test_networks():
+def verify_test_networks():
     G33 = nx.Graph(BRANCHES_33)
     scenarios_33 = {
         "A (single source)": [1],
@@ -120,7 +123,7 @@ def check_test_networks():
         print(f"69-bus, {label}: V_G={gens}, M_E={nu}/{k}={me:.4f}")
 
 
-def check_standard_metrics():
+def verify_standard_metrics():
     G33 = nx.Graph(BRANCHES_33)
     deg = nx.degree_centrality(G33)
     clo = nx.closeness_centrality(G33)
@@ -133,7 +136,7 @@ def check_standard_metrics():
     print(f"lambda_2(69-bus) = {nx.algebraic_connectivity(nx.Graph(BRANCHES_69)):.6f}")
 
 
-def check_capacity_feasibility():
+def verify_capacity_feasibility():
     import random
     random.seed(7)
     G33 = nx.Graph(BRANCHES_33)
@@ -146,10 +149,10 @@ def check_capacity_feasibility():
     me_f, nu_f, k_f = capacity_feasible_index(G33, gens, loads, capacity, demand)
     print(f"structural M_E = {nu}/{k} = {me:.4f}")
     print(f"capacity-feasible M_E' = {nu_f}/{k_f} = {me_f:.4f}")
-    assert me_f <= me + 1e-9
+    assert nu_f <= nu, f"M_E' must be <= M_E, got {nu_f}/{k_f} vs {nu}/{k}"
 
 
-def check_weighted_example():
+def verify_weighted_example():
     gens = ["g1", "g2", "g3"]
     loads = ["l1", "l2", "l3", "l4"]
     weights = {("g1","l1"):40, ("g1","l2"):25, ("g2","l2"):60, ("g2","l3"):30, ("g3","l4"):50}
@@ -162,7 +165,7 @@ def check_weighted_example():
     print(f"weighted M_E^w = {me_w:.4f}")
 
 
-def check_looped_microgrid():
+def verify_looped_microgrid():
     # ring of aux nodes, generators and loads hang off it: no direct G-L edges at all
     edges = [
         ("a1","a2"),("a2","a3"),("a3","a4"),("a4","a5"),("a5","a6"),("a6","a1"),
@@ -173,13 +176,14 @@ def check_looped_microgrid():
     gens, loads = ["g1","g2","g3"], ["l1","l2","l3"]
     me, nu, k = matching_index(G, gens, loads)
     print(f"looped microgrid, no direct G-L edges: M_E = {nu}/{k} = {me:.4f}")
-    assert me == 0.0
+    assert nu == 0, nu
     G.add_edge("g1", "l1")
     me2, nu2, k2 = matching_index(G, gens, loads)
     print(f"after adding one direct edge (g1,l1): M_E = {nu2}/{k2} = {me2:.4f}")
 
 
-def check_bounds_random(trials=2000, max_n=12, seed=0):
+def verify_bounds_random(trials=2000, max_n=12, seed=0):
+    # spot check of theorem 3.1, not a proof: random graphs, integer form 0 <= nu <= k
     import random
     from itertools import combinations
     rng = random.Random(seed)
@@ -197,7 +201,7 @@ def check_bounds_random(trials=2000, max_n=12, seed=0):
         G.add_nodes_from(nodes)
         G.add_edges_from((u, v) for u, v in combinations(nodes, 2) if rng.random() < p)
         me, nu, k = matching_index(G, gens, loads)
-        if not 0 <= me <= 1:
+        if not 0 <= nu <= k:
             bad += 1
     if bad:
         print(f"FAIL: {bad} bound violations")
@@ -206,16 +210,16 @@ def check_bounds_random(trials=2000, max_n=12, seed=0):
 
 
 if __name__ == "__main__":
-    check_paper_example()
+    verify_paper_example()
     print()
-    check_test_networks()
+    verify_test_networks()
     print()
-    check_standard_metrics()
+    verify_standard_metrics()
     print()
-    check_capacity_feasibility()
+    verify_capacity_feasibility()
     print()
-    check_weighted_example()
+    verify_weighted_example()
     print()
-    check_looped_microgrid()
+    verify_looped_microgrid()
     print()
-    check_bounds_random()
+    verify_bounds_random()
